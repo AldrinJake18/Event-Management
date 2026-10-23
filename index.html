@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Columban Events | Event Management</title>
+
+ 
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="#">
+        <span class="brand-mark">C</span>
+        <span>Columban Events</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="#events">Explore events</a>
+        <a href="#about">About</a>
+
+        <button class="btn btn-primary" id="navLogin">
+          Sign in
+        </button>
+
+        <div class="user-area" id="userArea">
+          <img
+            class="avatar"
+            id="navAvatar"
+            alt="Profile picture"
+            hidden
+          >
+
+          <span class="avatar" id="navInitial">C</span>
+
+          <span class="user-email" id="userEmail"></span>
+
+          <button class="btn btn-light" id="signOut" hidden>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <section class="hero-wrap">
+    <div class="hero">
+      <div>
+        <span class="eyebrow">✦ Find your people</span>
+
+        <h1>
+          Make room for<br>
+          something memorable.
+        </h1>
+
+        <p>
+          Discover events, meet people with shared interests,
+          and create moments worth showing up for.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-light hero-link" href="#events">
+            Explore events ↓
+          </a>
+
+          <button class="btn btn-blue" id="heroLogin">
+            Get started
+          </button>
+        </div>
+
+        <div class="status" id="status" role="status" aria-live="polite">
+          You're welcome to explore public events.
+        </div>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-card">
+          <div class="art-image">✦</div>
+
+          <div class="art-row">
+            <div>
+              <strong>Your next favorite memory</strong>
+              <br>
+              <small>Starts with showing up.</small>
+            </div>
+
+            <span class="mini-pill">OPEN TO ALL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <section class="section" id="events">
+      <div class="section-heading">
+        <div>
+          <h2>Explore events</h2>
+          <p>
+            Find something interesting happening around your community.
+          </p>
+        </div>
+
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+
+          <input
+            id="eventSearch"
+            type="search"
+            placeholder="Search events..."
+            aria-label="Search events"
+          >
+        </label>
+      </div>
+
+      <div class="event-grid" id="eventGrid">
+        <div class="empty-state">Loading events...</div>
+      </div>
+    </section>
+
+    <section class="auth-panel" id="authPanel">
+      <div class="auth-copy">
+        <h3 id="authTitle">Join the community</h3>
+
+        <p id="authDescription">
+          Sign in to join events and create your own.
+        </p>
+      </div>
+
+      <div class="auth-actions">
+        <button class="btn btn-primary" id="googleLogin">
+          Continue with Google
+        </button>
+
+        <button class="btn btn-light" id="githubLogin">
+          Continue with GitHub
+        </button>
+      </div>
+    </section>
+
+    <section class="section" id="about">
+      <div class="section-heading">
+        <div>
+          <h2>Good things happen together.</h2>
+
+          <p>
+            A simple place to discover events, share interests,
+            and bring people together.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+
+  <footer>
+    <div class="footer-inner">
+      <span>
+        <strong>Columban Events</strong>
+        · Events bring us together.
+      </span>
+
+      <span>Event Management System</span>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+
+    const SUPABASE_URL =
+      "https://ccgpitcihwvzbfnjhdvw.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_6TWjR120S3bZdi6Z3sYAMQ_V895kau1";
+
+    const client = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const status = document.getElementById("status");
+
+    const googleButton = document.getElementById("googleLogin");
+    const githubButton = document.getElementById("githubLogin");
+
+    const signOutButton = document.getElementById("signOut");
+    const navLoginButton = document.getElementById("navLogin");
+    const heroLoginButton = document.getElementById("heroLogin");
+
+    const authPanel = document.getElementById("authPanel");
+    const userArea = document.getElementById("userArea");
+
+    const userEmail = document.getElementById("userEmail");
+    const navInitial = document.getElementById("navInitial");
+    const navAvatar = document.getElementById("navAvatar");
+
+    const eventGrid = document.getElementById("eventGrid");
+    const eventSearch = document.getElementById("eventSearch");
+
+    let allEvents = [];
+    let currentUser = null;
+
+    function showStatus(message, type = "") {
+      status.textContent = message;
+      status.className = "status" + (type ? " " + type : "");
+    }
+
+    function openSignIn() {
+      authPanel.classList.add("show");
+
+      authPanel.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+
+    async function signIn(provider) {
+      showStatus(
+        "Redirecting to " +
+        (provider === "google" ? "Google" : "GitHub") +
+        "..."
+      );
+
+      const { error } = await client.auth.signInWithOAuth({
+        provider: provider,
+
+        options: {
+          redirectTo: window.location.origin + window.location.pathname
+        }
+      });
+
+      if (error) {
+        showStatus("Sign-in error: " + error.message, "error");
+      }
+    }
+
+    googleButton.addEventListener("click", function () {
+      signIn("google");
+    });
+
+    githubButton.addEventListener("click", function () {
+      signIn("github");
+    });
+
+    navLoginButton.addEventListener("click", openSignIn);
+    heroLoginButton.addEventListener("click", openSignIn);
+
+    signOutButton.addEventListener("click", async function () {
+      signOutButton.disabled = true;
+      showStatus("Signing out...");
+
+      const { error } = await client.auth.signOut();
+
+      signOutButton.disabled = false;
+
+      if (error) {
+        showStatus("Sign-out error: " + error.message, "error");
+        return;
+      }
+
+      updateInterface(null);
+      showStatus("You've signed out successfully.", "success");
+    });
+
+    function updateInterface(user) {
+      currentUser = user;
+
+      if (user) {
+        showStatus(
+          "Signed in as " + (user.email || "your account") + ".",
+          "success"
+        );
+
+        authPanel.classList.remove("show");
+        navLoginButton.hidden = true;
+        userArea.style.display = "flex";
+        signOutButton.hidden = false;
+
+        userEmail.textContent = user.email || "";
+
+        const metadata = user.user_metadata || {};
+
+        const displayName =
+          metadata.full_name ||
+          metadata.name ||
+          user.email ||
+          "Columban Events user";
+
+        navInitial.textContent =
+          displayName.trim().charAt(0).toUpperCase() || "C";
+
+        const avatarUrl = metadata.avatar_url || metadata.picture;
+
+        if (avatarUrl) {
+          navAvatar.src = avatarUrl;
+          navAvatar.hidden = false;
+          navInitial.hidden = true;
+
+          navAvatar.onerror = function () {
+            navAvatar.hidden = true;
+            navInitial.hidden = false;
+          };
+        } else {
+          navAvatar.hidden = true;
+          navInitial.hidden = false;
+        }
+
+      } else {
+        navLoginButton.hidden = false;
+        userArea.style.display = "none";
+        signOutButton.hidden = true;
+
+        navAvatar.hidden = true;
+        navInitial.hidden = false;
+        userEmail.textContent = "";
+
+        authPanel.classList.add("show");
+
+        document.getElementById("authTitle").textContent =
+          "Join the community";
+
+        document.getElementById("authDescription").textContent =
+          "Sign in to join events and create your own.";
+      }
+    }
+
+    function safeText(value) {
+      return String(value ?? "").replace(/[&<>"']/g, function (character) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[character];
+      });
+    }
+
+    function renderEvents(events) {
+      if (!events.length) {
+        eventGrid.innerHTML =
+          '<div class="empty-state">' +
+          'No events found. Try another search or check back later.' +
+          '</div>';
+
+        return;
+      }
+
+      eventGrid.innerHTML = events.map(function (event) {
+        const title = safeText(event.title || "Untitled event");
+
+        const description = safeText(
+          event.description || "More details coming soon."
+        );
+
+        const imagePath = event.image_path;
+
+        let imageUrl = "";
+
+        if (imagePath) {
+          imageUrl = imagePath.startsWith("http")
+            ? imagePath
+            : client.storage
+                .from("event-images")
+                .getPublicUrl(imagePath).data.publicUrl;
+        }
+
+        const imageMarkup = imageUrl
+          ? '<img src="' + safeText(imageUrl) +
+            '" alt="' + title + '" loading="lazy">'
+          : '<span aria-hidden="true">✦</span>';
+
+        const capacity = Number(event.capacity || 0);
+
+        return `
+          <article class="event-card">
+            <div class="event-image">
+              ${imageMarkup}
+            </div>
+
+            <div class="event-content">
+              <span class="mini-pill">COMMUNITY EVENT</span>
+
+              <h3>${title}</h3>
+
+              <p>
+                ${
+                  description.length > 125
+                    ? description.slice(0, 125) + "…"
+                    : description
+                }
+              </p>
+
+              <div class="event-meta">
+                <span>👥 Capacity: ${capacity}</span>
+                <span>Open event</span>
+              </div>
+
+              <button
+                class="btn btn-primary"
+                data-event-id="${safeText(event.id)}"
+              >
+                View event
+              </button>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      eventGrid.querySelectorAll("[data-event-id]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          const event = allEvents.find(function (item) {
+            return String(item.id) === button.dataset.eventId;
+          });
+
+          if (!event) {
+            return;
+          }
+
+          const description =
+            event.description || "No description available.";
+
+          const capacity = event.capacity ?? "Not specified";
+
+          const details =
+            "Event: " + event.title +
+            "\n\n" + description +
+            "\n\nCapacity: " + capacity +
+            (
+              currentUser
+                ? "\n\nSubscription actions will be connected in the next frontend step."
+                : "\n\nSign in to join events. Subscription actions will be connected in the next frontend step."
+            );
+
+          window.alert(details);
+        });
+      });
+    }
+
+    async function loadEvents() {
+      eventGrid.innerHTML =
+        '<div class="empty-state">Loading events...</div>';
+
+      const { data, error } = await client
+        .from("events")
+        .select("id, title, description, image_path, capacity, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        eventGrid.innerHTML =
+          '<div class="empty-state">' +
+          'Could not load events. Check your Supabase connection ' +
+          'and public SELECT policy.' +
+          '<br><small>' + safeText(error.message) + '</small>' +
+          '</div>';
+
+        return;
+      }
+
+      allEvents = data || [];
+
+      filterEvents();
+    }
+
+    function filterEvents() {
+      const query = eventSearch.value.trim().toLowerCase();
+
+      const filtered = allEvents.filter(function (event) {
+        return (
+          String(event.title || "").toLowerCase().includes(query) ||
+          String(event.description || "").toLowerCase().includes(query)
+        );
+      });
+
+      renderEvents(filtered);
+    }
+
+    eventSearch.addEventListener("input", filterEvents);
+
+    async function checkLogin() {
+      const { data, error } = await client.auth.getUser();
+
+      if (error || !data.user) {
+        updateInterface(null);
+        return;
+      }
+
+      updateInterface(data.user);
+    }
+
+    client.auth.onAuthStateChange(function (event, session) {
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        updateInterface(session ? session.user : null);
+
+      } else if (event === "SIGNED_OUT") {
+        updateInterface(null);
+      }
+    });
+
+    loadEvents();
+    checkLogin();
+  </script>
+</body>
+</html>
